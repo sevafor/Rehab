@@ -10,6 +10,8 @@ public partial class AgentCrate : Agent
     public virtual bool BreakOnTouch => false;
     public virtual bool IsReinforced => false;
     public virtual bool IsBreakable => true;
+    public virtual float BounceScale => 1f;
+    int springSquashId;
 
     public AgentCrate()
     {
@@ -53,6 +55,25 @@ public partial class AgentCrate : Agent
                 return;
             }
         }
+    }
+
+    public virtual bool OnLandedOn(AgentCharacter agent)
+    {
+        if (!IsBreakable || IsReinforced || IsBroken) return false;
+        CallDeferred("Crate_ForceBreak");
+        return true;
+    }
+
+    public async void PlaySpringSquash(int slot)
+    {
+        int id = ++springSquashId;
+        DoAnimation(slot, false);
+        AnimationPlayer animPlayer = SubModels[ActiveModel].GetNode<AnimationPlayer>("AnimationPlayer");
+        animPlayer.Seek(0, true);
+        DoSound(3, 1f, 0f);
+        await ToSignal(GetTree().CreateTimer(animPlayer.CurrentAnimationLength), SceneTreeTimer.SignalName.Timeout);
+        if (id != springSquashId || IsBroken) return;
+        DoAnimation(0, false);
     }
 
     public void OnBodyExited(Node3D body)

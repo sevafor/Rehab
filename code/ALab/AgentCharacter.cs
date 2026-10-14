@@ -76,14 +76,16 @@ public partial class AgentCharacter : Agent
     public virtual float SlideTime => 0.4f;
     public virtual float SlideJumpSpeed => 14.0f;
     public virtual float JumpSpeed => 15.0f;
+    public virtual float CrateBounceSpeed => JumpSpeed;
     public virtual float PushMass => 80.0f;
     public virtual float PushStrength => 0.2f;
     public virtual float SpinHitRadius => 1.25f;
     public virtual float SpinHitSpeed => 16.0f;
-    public virtual float SpinHitLift => 7.0f;
+    public virtual float SpinHitLift => 3.0f;
     public virtual float StepHeight => 1.37f;
     HashSet<Node3D> spinHitBodies = new();
-    SphereShape3D spinHitShape;
+    BoxShape3D spinHitShape;
+    const float SpinHitMargin = 0.15f;
 
     bool infiniteJumps = false;
     protected virtual int TimesCanJump => 2;
@@ -110,7 +112,7 @@ public partial class AgentCharacter : Agent
 
         DynamicCol = new CollisionShape3D();
         //var box = new BoxShape3D();
-        var box = new ConvexPolygonShape3D();
+        ConvexPolygonShape3D box = new ConvexPolygonShape3D();
         box.Points = [
             new Vector3(0.5f, 0, 0.5f),
             new Vector3(-0.5f, 0, -0.5f),
@@ -241,10 +243,10 @@ public partial class AgentCharacter : Agent
         direction = direction.Clamp(-Vector3.One, Vector3.One);
         if (RehabScene.Root.XR_Enabled)
         {
-            var camvector = RehabScene.Root.XR_Origin.XR_Camera.GlobalTransform.Basis.Z;
+            Vector3 camvector = RehabScene.Root.XR_Origin.XR_Camera.GlobalTransform.Basis.Z;
             camvector.Y = 0f;
             camvector = camvector.Normalized();
-            var camright = new Vector3(camvector.Z, 0, -camvector.X);
+            Vector3 camright = new Vector3(camvector.Z, 0, -camvector.X);
             direction = (direction.X * camvector) + (direction.Z * camright);
         }
         else
@@ -253,7 +255,7 @@ public partial class AgentCharacter : Agent
         }
         direction.Y = 0f;
         float dirLength = Math.Abs(direction.Length());
-        var pressed = dirLength > 0.05;
+        bool pressed = dirLength > 0.05;
 
         if (pushTimer > 0f)
         {
@@ -271,9 +273,9 @@ public partial class AgentCharacter : Agent
             }
             else
             {
-                var toBody = lastPushedBody.GlobalPosition - GlobalPosition;
+                Vector3 toBody = lastPushedBody.GlobalPosition - GlobalPosition;
                 toBody.Y = 0f;
-                var moveDir = new Vector3(char_velocity.X, 0f, char_velocity.Z);
+                Vector3 moveDir = new Vector3(char_velocity.X, 0f, char_velocity.Z);
                 if (toBody.Length() < PushFollowDistance && moveDir.LengthSquared() > 0.01f && toBody.Normalized().Dot(moveDir.Normalized()) > 0.5f)
                 {
                     pushTimer = PushAnimGrace;
@@ -451,7 +453,7 @@ public partial class AgentCharacter : Agent
             char_velocity.X = direction.X * currentSpeed;
             char_velocity.Z = direction.Z * currentSpeed;
             float atan = (float)Math.Atan2(direction.X, direction.Z);
-            var targetRot = new Vector3(0, atan, 0);
+            Vector3 targetRot = new Vector3(0, atan, 0);
             if (currentSpeed != 0)
             {
                 GlobalRotation = targetRot;
@@ -571,22 +573,30 @@ public partial class AgentCharacter : Agent
             UpdateSpinHits();
         }
 
-        var colCount1 = (int)Call("get_slide_collision_count");
-        var pushed = new HashSet<Node3D>();
+        int colCount1 = (int)Call("get_slide_collision_count");
+        HashSet<Node3D> pushed = new HashSet<Node3D>();
         bool hitPushable = false;
+        bool bouncedOnCrate = false;
         for (int i = 0; i < colCount1; i++)
         {
-            var colData = (KinematicCollision3D)Call("get_slide_collision", i);
+            KinematicCollision3D colData = (KinematicCollision3D)Call("get_slide_collision", i);
             if (colData == null) continue;
-            var colCount = colData.GetCollisionCount();
+            int colCount = colData.GetCollisionCount();
             if (colCount == 0) continue;
             for (int a = 0; a < colCount; a++)
             {
-                var hit = colData.GetCollider(a);
+                GodotObject hit = colData.GetCollider(a);
                 if (hit is Node3D rigid && rigid.IsClass("RigidBody3D") && !(bool)rigid.Get("freeze"))
                 {
                     hitPushable = true;
-                    if (spinTimer <= 0f && pushed.Add(rigid))
+                    if (spinTimer > 0f)
+                    {
+                        if (spinHitBodies.Add(rigid))
+                        {
+                            SpinHitRigidBody(rigid);
+                        }
+                    }
+                    else if (pushed.Add(rigid))
                     {
                         PushRigidBody(rigid, colData.GetNormal(a), colData.GetPosition(a));
                     }
@@ -599,6 +609,11 @@ public partial class AgentCharacter : Agent
                 if (hit is AgentCrate crate)
                 {
                     crate.OnBodyEntered(this);
+                    if (!bouncedOnCrate && char_velocity.Y <= 0f && colData.GetNormal(a).Y > 0.7f && crate.OnLandedOn(this))
+                    {
+                        bouncedOnCrate = true;
+                        BounceOffCrate(crate.BounceScale);
+                    }
                 }
                 else if (hit is Agents.Furniture.School.Boiler.DoubleDoor_Anim furn)
                 {
@@ -611,6 +626,20 @@ public partial class AgentCharacter : Agent
         {
             groundedByPush = SnapDownOffPushable(GlobalPosition.Y - preMoveY);
         }
+    }
+
+    void BounceOffCrate(float scale)
+    {
+        char_velocity.Y = CrateBounceSpeed * scale;
+        isJumping = true;
+        isSlideJumping = false;
+        timesJumped = 1;
+        DoAnimation(Crash.Anim.JumpStart, false);
+        if (ActiveAnim == Crash.Anim.JumpStart)
+        {
+            SubModels[ActiveModel].GetNode<AnimationPlayer>("AnimationPlayer").Seek(0, true);
+        }
+        DoSound(0, 1f, 0f);
     }
 
     void EndSlide()
@@ -627,7 +656,7 @@ public partial class AgentCharacter : Agent
 
     void PushRigidBody(Node3D body, Vector3 normal, Vector3 point)
     {
-        var pushDir = -normal;
+        Vector3 pushDir = -normal;
         pushDir.Y = 0f;
         if (pushDir.LengthSquared() < 0.0001f) return;
         pushDir = pushDir.Normalized();
@@ -647,11 +676,11 @@ public partial class AgentCharacter : Agent
 
     bool SnapDownOffPushable(float lift)
     {
-        var col = new KinematicCollision3D();
+        KinematicCollision3D col = new KinematicCollision3D();
         float probe = lift + 0.1f;
         if ((bool)Call("test_move", GlobalTransform, Vector3.Down * probe, col))
         {
-            var below = col.GetCollider() as Node3D;
+            Node3D below = col.GetCollider() as Node3D;
             bool belowIsPushable = below != null && below.IsClass("RigidBody3D") && !(bool)below.Get("freeze");
             if (!belowIsPushable && col.GetNormal().Y >= 0.7f)
             {
@@ -666,7 +695,7 @@ public partial class AgentCharacter : Agent
     static bool IsStaticGround(GodotObject collider)
     {
         if (collider is not Node node || node.GetClass() != "StaticBody3D") return false;
-        for (var n = node; n != null; n = n.GetParent())
+        for (Node n = node; n != null; n = n.GetParent())
         {
             if (n is Agent) return false;
         }
@@ -675,22 +704,22 @@ public partial class AgentCharacter : Agent
 
     void TryStepUp(float delta)
     {
-        var motion = new Vector3(char_velocity.X, 0f, char_velocity.Z) * delta;
+        Vector3 motion = new Vector3(char_velocity.X, 0f, char_velocity.Z) * delta;
         if (StepHeight <= 0f || motion.LengthSquared() < 0.000001f) return;
-        var forward = motion.Normalized() * Math.Max(motion.Length(), 0.1f);
+        Vector3 forward = motion.Normalized() * Math.Max(motion.Length(), 0.1f);
 
-        var from = GlobalTransform;
-        var col = new KinematicCollision3D();
+        Transform3D from = GlobalTransform;
+        KinematicCollision3D col = new KinematicCollision3D();
         if (!(bool)Call("test_move", from, forward, col)) return;
         if (!IsStaticGround(col.GetCollider())) return;
         if (col.GetNormal().Y > 0.7f) return;
 
-        var up = Vector3.Up * StepHeight;
+        Vector3 up = Vector3.Up * StepHeight;
         if ((bool)Call("test_move", from, up)) return;
-        var raised = from.Translated(up);
+        Transform3D raised = from.Translated(up);
         if ((bool)Call("test_move", raised, forward)) return;
-        var landCol = new KinematicCollision3D();
-        var raisedFwd = raised.Translated(forward);
+        KinematicCollision3D landCol = new KinematicCollision3D();
+        Transform3D raisedFwd = raised.Translated(forward);
         if (!(bool)Call("test_move", raisedFwd, -up, landCol)) return;
         if (landCol.GetNormal().Y < 0.7f) return;
         if (!IsStaticGround(landCol.GetCollider())) return;
@@ -702,16 +731,17 @@ public partial class AgentCharacter : Agent
 
     void UpdateSpinHits()
     {
-        if (spinHitShape == null) spinHitShape = new SphereShape3D();
-        spinHitShape.Radius = SpinHitRadius;
-        var query = new PhysicsShapeQueryParameters3D();
+        if (spinHitShape == null) spinHitShape = new BoxShape3D();
+        float width = (SpinHitRadius * 2f) + 0.1f + (SpinHitMargin * 2f);
+        spinHitShape.Size = new Vector3(width, 1.8f + (SpinHitMargin * 2f), width);
+        PhysicsShapeQueryParameters3D query = new PhysicsShapeQueryParameters3D();
         query.Shape = spinHitShape;
-        query.Transform = new Transform3D(Basis.Identity, GlobalPosition + (Vector3.Up * 0.9f));
+        query.Transform = new Transform3D(GlobalTransform.Basis, GlobalPosition + (Vector3.Up * 0.9f));
         query.CollisionMask = (uint)Call("get_collision_mask");
         query.Exclude = new Godot.Collections.Array<Rid>() { (Rid)Call("get_rid") };
 
-        var results = GetWorld3D().DirectSpaceState.IntersectShape(query);
-        foreach (var result in results)
+        Godot.Collections.Array<Godot.Collections.Dictionary> results = GetWorld3D().DirectSpaceState.IntersectShape(query);
+        foreach (Godot.Collections.Dictionary result in results)
         {
             if (result["collider"].AsGodotObject() is not Node3D body) continue;
             if (!body.IsClass("RigidBody3D") || (bool)body.Get("freeze")) continue;
@@ -722,7 +752,7 @@ public partial class AgentCharacter : Agent
 
     void SpinHitRigidBody(Node3D body)
     {
-        var hitDir = body.GlobalPosition - GlobalPosition;
+        Vector3 hitDir = body.GlobalPosition - GlobalPosition;
         hitDir.Y = 0f;
         if (hitDir.LengthSquared() < 0.0001f)
         {
@@ -731,8 +761,8 @@ public partial class AgentCharacter : Agent
         }
         hitDir = hitDir.Normalized();
 
-        var targetVel = (hitDir * SpinHitSpeed) + (Vector3.Up * SpinHitLift);
-        var velChange = targetVel - (Vector3)body.Get("linear_velocity");
+        Vector3 targetVel = (hitDir * SpinHitSpeed) + (Vector3.Up * SpinHitLift);
+        Vector3 velChange = targetVel - (Vector3)body.Get("linear_velocity");
         float mass = (float)body.Get("mass");
         float effectiveMass = Math.Min(mass, PushMass);
         body.Call("apply_central_impulse", velChange * effectiveMass);
@@ -763,8 +793,8 @@ public partial class AgentCharacter : Agent
             headdirY = Math.Clamp(headdirY, -1.5f, 0f);
         }
 
-        var oldX = headdirX;
-        var oldY = headdirY;
+        float oldX = headdirX;
+        float oldY = headdirY;
         if (Input.IsActionPressed(RehabGame.Pad_RStick_Left))
         {
             if (!RehabGame.InvertCameraX)
@@ -822,8 +852,8 @@ public partial class AgentCharacter : Agent
         SubModels[ActiveModel].GetNode<AnimationPlayer>("AnimationPlayer").Advance(delta);
         if (ActiveSkeleton != null && JointsConst[2] != -1 && ActiveSkeleton.GetBoneCount() > JointsConst[2])
         {
-            var headBoneRot = ActiveSkeleton.GetBonePoseRotation(JointsConst[2]);
-            var headBoneEuler = headBoneRot.GetEuler();
+            Quaternion headBoneRot = ActiveSkeleton.GetBonePoseRotation(JointsConst[2]);
+            Vector3 headBoneEuler = headBoneRot.GetEuler();
             headBoneEuler.X += headdirY;
             headBoneEuler.Y += headdirX;
             //headBoneEuler.Z -= headdirX;
@@ -839,16 +869,16 @@ public partial class AgentCharacter : Agent
         if (footsteptimer > 0f) return;
 
         footsteplast = !footsteplast;
-        var clip1 = FS_Dirt_1;
-        var clip2 = FS_Dirt_2;
-        var space_state = GetWorld3D().DirectSpaceState;
-        var query = PhysicsRayQueryParameters3D.Create(GlobalPosition + (Vector3.Up * 1.0f), GlobalPosition + (Vector3.Up * -3.0f));
-        var rid = (Rid)Call("get_rid");
+        AudioStream clip1 = FS_Dirt_1;
+        AudioStream clip2 = FS_Dirt_2;
+        PhysicsDirectSpaceState3D space_state = GetWorld3D().DirectSpaceState;
+        PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(GlobalPosition + (Vector3.Up * 1.0f), GlobalPosition + (Vector3.Up * -3.0f));
+        Rid rid = (Rid)Call("get_rid");
         query.Exclude = new Godot.Collections.Array<Rid>() { rid };
-        var result = space_state.IntersectRay(query);
+        Godot.Collections.Dictionary result = space_state.IntersectRay(query);
         if (result.ContainsKey("collider"))
         {
-            var body = (Node)result["collider"];
+            Node body = (Node)result["collider"];
             switch (body.GetParent().Name)
             {
                 case "Normal_Rock":
@@ -929,7 +959,7 @@ public partial class AgentCharacter : Agent
         float MinX = 10000f, MinZ = 10000f, MaxX = -10000f, MaxY = -10000f, MaxZ = -10000f; ;
         for (int i = 0; i < ActiveSkeleton.GetBoneCount(); i++)
         {
-            var pos = ActiveSkeleton.GetBoneGlobalPose(i);
+            Transform3D pos = ActiveSkeleton.GetBoneGlobalPose(i);
             if (pos.Origin.X < MinX) MinX = pos.Origin.X;
             if (pos.Origin.Z < MinZ) MinZ = pos.Origin.Z;
             if (pos.Origin.X > MaxX) MaxX = pos.Origin.X;
@@ -952,7 +982,7 @@ public partial class AgentCharacter : Agent
         DynamicCol.Shape.Set("size", oldSize.MoveToward(size, delta * 10f));
         */
         Vector3 size = new Vector3((MaxX - MinX) + 0.1f, MaxY, (MaxZ - MinZ) + 0.1f);
-        var oldPts = (Vector3[])DynamicCol.Shape.Get("points");
+        Vector3[] oldPts = (Vector3[])DynamicCol.Shape.Get("points");
         Vector3[] Points = [
             oldPts[0].MoveToward(new Vector3(0.5f, 0, 0.5f) * size, 10f * delta),
             oldPts[1].MoveToward(new Vector3(-0.5f, 0, -0.5f) * size, 10f * delta),
@@ -979,7 +1009,7 @@ public partial class AgentCharacter : Agent
         {
             inBox = inBox.Merge(mesh.Mesh.GetAabb());
         }
-        foreach (var i in parent.GetChildren())
+        foreach (Node i in parent.GetChildren())
         {
             UpdateDynamicColNested(i, ref inBox);
         }

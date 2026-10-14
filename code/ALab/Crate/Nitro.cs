@@ -10,4 +10,9 @@ public partial class Nitro : AgentCrate
     {
         DelayedExplosion();
     }
+
+    public override bool OnLandedOn(AgentCharacter agent)
+    {
+        return false;
+    }
 }
