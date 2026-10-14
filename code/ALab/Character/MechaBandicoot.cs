@@ -10,4 +10,7 @@ public partial class MechaBandicoot : AgentCharacter
     public override float CrawlSpeed => 0f;
     public override float SlideSpeed => 0f;
     public override float SlideTime => 0f;
+    public override float JumpSpeed => 17.0f;
+
+    public override int TimesCanJump => 1;
 }

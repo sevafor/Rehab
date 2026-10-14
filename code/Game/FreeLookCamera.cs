@@ -16,7 +16,7 @@ public partial class FreeLookCamera : Camera3D
     Vector3 _velocity = new Vector3();
     float _acceleration = 30f;
     float _deceleration = -10f;
-    float _vel_multiplier = 4;
+    float _vel_multiplier = 7;
 
     float _w = 0f;
     float _s = 0f;
@@ -80,6 +80,7 @@ public partial class FreeLookCamera : Camera3D
     {
         _update_mouselook();
         _update_movement(delta);
+        _update_vel_multiplier(delta);
         UpdateCamControls(delta);
     }
 
@@ -177,6 +178,18 @@ public partial class FreeLookCamera : Camera3D
         RotateObjectLocal(new Vector3(1f,0f,0f), Mathf.DegToRad(-pitch));
     }
 
+    void _update_vel_multiplier(double delta)
+    {
+        if (Input.IsJoyButtonPressed(0, JoyButton.DpadUp))
+        {
+            _vel_multiplier = Math.Clamp(_vel_multiplier * 1.03f, 0.2f, 20f);
+        }
+        else if (Input.IsJoyButtonPressed(0, JoyButton.DpadDown))
+        {
+            _vel_multiplier = Math.Clamp(_vel_multiplier / 1.03f, 0.2f, 20f);
+        }
+    }
+
     public void FullReset(){
         _mouse_position = Vector2.Zero;
         _total_pitch = 0f;
@@ -184,7 +197,7 @@ public partial class FreeLookCamera : Camera3D
         _velocity = Vector3.Zero;
         _acceleration = 30;
         _deceleration = -10;
-        _vel_multiplier = 4;
+        _vel_multiplier = 7;
     }
 
 

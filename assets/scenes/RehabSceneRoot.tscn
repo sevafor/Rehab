@@ -1,21 +1,21 @@
-[gd_scene load_steps=26 format=3 uid="uid://by5ieljhkskx8"]
+[gd_scene format=3 uid="uid://by5ieljhkskx8"]
 
-[ext_resource type="Script" path="res://code/Game/RehabScene.cs" id="1_nokr2"]
-[ext_resource type="Script" path="res://code/Game/XR/RehabXROrigin.cs" id="2_3q0m5"]
+[ext_resource type="Script" uid="uid://uvb04a1j6hcx" path="res://code/Game/RehabScene.cs" id="1_nokr2"]
+[ext_resource type="Script" uid="uid://bahrb450lolhm" path="res://code/Game/XR/RehabXROrigin.cs" id="2_3q0m5"]
 [ext_resource type="PackedScene" uid="uid://dj63qinhimnyd" path="res://assets/frontend/FE_LevelSelect.tscn" id="2_hbkbo"]
 [ext_resource type="PackedScene" uid="uid://dbctcygs8r8uu" path="res://assets/frontend/FE_Loading.tscn" id="3_w1df3"]
 [ext_resource type="PackedScene" uid="uid://deku1jgir0rrr" path="res://assets/frontend/FE_HUD.tscn" id="4_ckn0n"]
-[ext_resource type="Script" path="res://code/Game/PlayerCamera.cs" id="4_dyya7"]
+[ext_resource type="Script" uid="uid://dj3cbo7mabeoo" path="res://code/Game/PlayerCamera.cs" id="4_dyya7"]
 [ext_resource type="Texture2D" uid="uid://c4bvmef1cikb4" path="res://assets/textures/shadow/cube.png" id="4_w1lrk"]
-[ext_resource type="Script" path="res://code/Game/FreeLookCamera.cs" id="5_7wkgt"]
+[ext_resource type="Script" uid="uid://bde0yegu8oong" path="res://code/Game/FreeLookCamera.cs" id="5_7wkgt"]
 [ext_resource type="PackedScene" uid="uid://csc3ocq55uwbc" path="res://assets/frontend/FE_Menu.tscn" id="5_j6sms"]
 [ext_resource type="PackedScene" uid="uid://cuo4j5jc63e2f" path="res://assets/frontend/FE_Credits.tscn" id="6_b843s"]
 [ext_resource type="PackedScene" uid="uid://remb1fd1nang" path="res://assets/frontend/dynamic/FE_MainMenuDynamic.tscn" id="7_clxc5"]
-[ext_resource type="Script" path="res://code/Frontend/MusicFader.cs" id="8_ld425"]
+[ext_resource type="Script" uid="uid://doj7n88vxvrfc" path="res://code/Frontend/MusicFader.cs" id="8_ld425"]
 [ext_resource type="PackedScene" uid="uid://dnro8427myeml" path="res://assets/frontend/FE_GameOver.tscn" id="8_yxkhr"]
 [ext_resource type="PackedScene" uid="uid://crkj3084akhns" path="res://assets/frontend/FE_Installer.tscn" id="9_8r62c"]
-[ext_resource type="Script" path="res://code/Frontend/ConfigHandler.cs" id="12_x2vfy"]
-[ext_resource type="Script" path="res://code/Game/XR/RehabXRController.cs" id="14_23l16"]
+[ext_resource type="Script" uid="uid://bstigbuccelu2" path="res://code/Frontend/ConfigHandler.cs" id="12_x2vfy"]
+[ext_resource type="Script" uid="uid://bnx5csus7uuif" path="res://code/Game/XR/RehabXRController.cs" id="14_23l16"]
 [ext_resource type="Texture2D" uid="uid://nkp3ebjlrr0k" path="res://assets/textures/shadow/clin.png" id="14_n1s26"]
 
 [sub_resource type="Environment" id="Environment_3bekd"]
@@ -47,78 +47,78 @@ background_mode = 1
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_h33tr"]
 
-[node name="Root" type="Node3D"]
+[node name="Root" type="Node3D" unique_id=1475918057]
 script = ExtResource("1_nokr2")
 DefaultEnv = SubResource("Environment_3bekd")
 
-[node name="XROrigin3D" type="XROrigin3D" parent="."]
+[node name="XROrigin3D" type="XROrigin3D" parent="." unique_id=7892968]
 process_mode = 3
 visible = false
 script = ExtResource("2_3q0m5")
 
-[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D" unique_id=384365778]
 far = 90000.0
 
-[node name="AudioListener3D" type="AudioListener3D" parent="XROrigin3D/XRCamera3D"]
+[node name="AudioListener3D" type="AudioListener3D" parent="XROrigin3D/XRCamera3D" unique_id=310077822]
 current = true
 
-[node name="HandL" type="XRController3D" parent="XROrigin3D"]
+[node name="HandL" type="XRController3D" parent="XROrigin3D" unique_id=347878656]
 tracker = &"left_hand"
 script = ExtResource("14_23l16")
 
-[node name="Hand" type="RigidBody3D" parent="XROrigin3D/HandL"]
+[node name="Hand" type="RigidBody3D" parent="XROrigin3D/HandL" unique_id=156211349]
 process_mode = 4
 collision_layer = 511
 collision_mask = 511
 freeze = true
 freeze_mode = 1
-max_contacts_reported = 40
 contact_monitor = true
+max_contacts_reported = 40
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/HandL/Hand"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/HandL/Hand" unique_id=874468718]
 transform = Transform3D(4.37114e-08, 1, -8.74228e-08, 1, -4.37114e-08, 0, -3.82137e-15, -8.74228e-08, -1, 0.0122168, 0.0011621, -0.0637217)
 shape = SubResource("BoxShape3D_so88d")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/HandL/Hand/CollisionShape3D"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/HandL/Hand/CollisionShape3D" unique_id=1605290262]
 visible = false
 mesh = SubResource("BoxMesh_o678c")
 
-[node name="HandR" type="XRController3D" parent="XROrigin3D"]
+[node name="HandR" type="XRController3D" parent="XROrigin3D" unique_id=885898763]
 tracker = &"right_hand"
 script = ExtResource("14_23l16")
 
-[node name="Hand" type="RigidBody3D" parent="XROrigin3D/HandR"]
+[node name="Hand" type="RigidBody3D" parent="XROrigin3D/HandR" unique_id=94496077]
 process_mode = 4
 collision_layer = 511
 collision_mask = 511
 freeze = true
 freeze_mode = 1
-max_contacts_reported = 40
 contact_monitor = true
+max_contacts_reported = 40
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/HandR/Hand"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/HandR/Hand" unique_id=1567391019]
 transform = Transform3D(4.37114e-08, 1, -8.74228e-08, 1, -4.37114e-08, 0, -3.82137e-15, -8.74228e-08, -1, 0.0122168, 0.0011621, -0.0637217)
 shape = SubResource("BoxShape3D_so88d")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/HandR/Hand/CollisionShape3D"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/HandR/Hand/CollisionShape3D" unique_id=29917222]
 visible = false
 mesh = SubResource("BoxMesh_o678c")
 
-[node name="FE_Pivot" type="Node3D" parent="XROrigin3D"]
+[node name="FE_Pivot" type="Node3D" parent="XROrigin3D" unique_id=1368775989]
 
-[node name="FE_Display" type="MeshInstance3D" parent="XROrigin3D/FE_Pivot"]
+[node name="FE_Display" type="MeshInstance3D" parent="XROrigin3D/FE_Pivot" unique_id=568093994]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -8)
 sorting_offset = 900.0
 material_override = SubResource("StandardMaterial3D_h4xuf")
 mesh = SubResource("PlaneMesh_sv34l")
 skeleton = NodePath("../../..")
 
-[node name="FE_Collider" type="StaticBody3D" parent="XROrigin3D/FE_Pivot/FE_Display"]
+[node name="FE_Collider" type="StaticBody3D" parent="XROrigin3D/FE_Pivot/FE_Display" unique_id=1876333611]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/FE_Pivot/FE_Display/FE_Collider"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/FE_Pivot/FE_Display/FE_Collider" unique_id=673656467]
 shape = SubResource("BoxShape3D_lc28n")
 
-[node name="CursorL" type="Sprite3D" parent="XROrigin3D/FE_Pivot/FE_Display"]
+[node name="CursorL" type="Sprite3D" parent="XROrigin3D/FE_Pivot/FE_Display" unique_id=699839434]
 transform = Transform3D(0.3, 0, 0, 0, -1.31134e-08, -0.3, 0, 0.3, -1.31134e-08, 0, 0.0999999, 0)
 sorting_offset = 2500.0
 cast_shadow = 0
@@ -126,14 +126,14 @@ no_depth_test = true
 render_priority = 127
 texture = ExtResource("14_n1s26")
 
-[node name="CursorR" type="Sprite3D" parent="XROrigin3D/FE_Pivot/FE_Display"]
+[node name="CursorR" type="Sprite3D" parent="XROrigin3D/FE_Pivot/FE_Display" unique_id=217665940]
 transform = Transform3D(0.3, 0, 0, 0, -1.31134e-08, -0.3, 0, 0.3, -1.31134e-08, 0, 0.0999999, 0)
 sorting_offset = 2500.0
 cast_shadow = 0
 render_priority = 127
 texture = ExtResource("14_n1s26")
 
-[node name="FE" type="Control" parent="."]
+[node name="FE" type="Control" parent="." unique_id=1250275050]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -141,99 +141,99 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="FE_MainMenuDynamic" parent="FE" instance=ExtResource("7_clxc5")]
+[node name="FE_MainMenuDynamic" parent="FE" unique_id=191809382 instance=ExtResource("7_clxc5")]
 process_mode = 4
 visible = false
 layout_mode = 1
 
-[node name="LevelSelect" parent="FE" instance=ExtResource("2_hbkbo")]
+[node name="LevelSelect" parent="FE" unique_id=410501129 instance=ExtResource("2_hbkbo")]
 process_mode = 4
 visible = false
 z_index = 1
 layout_mode = 1
 
-[node name="FE_HUD" parent="FE" instance=ExtResource("4_ckn0n")]
+[node name="FE_HUD" parent="FE" unique_id=391207990 instance=ExtResource("4_ckn0n")]
 process_mode = 3
 z_index = 4
 layout_mode = 1
 pivot_offset = Vector2(640, 360)
 
-[node name="FE_Menu" parent="FE" instance=ExtResource("5_j6sms")]
+[node name="FE_Menu" parent="FE" unique_id=1541229531 instance=ExtResource("5_j6sms")]
 process_mode = 4
 visible = false
 z_index = 2
 layout_mode = 1
 
-[node name="FE_Credits" parent="FE" instance=ExtResource("6_b843s")]
+[node name="FE_Credits" parent="FE" unique_id=1816102459 instance=ExtResource("6_b843s")]
 z_index = 1
 layout_mode = 1
 
-[node name="FE_GameOver" parent="FE" instance=ExtResource("8_yxkhr")]
+[node name="FE_GameOver" parent="FE" unique_id=71931616 instance=ExtResource("8_yxkhr")]
 process_mode = 4
 visible = false
 z_index = 6
 layout_mode = 1
 
-[node name="Loading" parent="FE" instance=ExtResource("3_w1df3")]
+[node name="Loading" parent="FE" unique_id=1106605911 instance=ExtResource("3_w1df3")]
 process_mode = 4
 visible = false
 z_index = 5
 layout_mode = 1
 
-[node name="FE_Installer" parent="FE" instance=ExtResource("9_8r62c")]
+[node name="FE_Installer" parent="FE" unique_id=671878987 instance=ExtResource("9_8r62c")]
 process_mode = 4
 visible = false
 z_index = 6
 layout_mode = 1
 
-[node name="WorldEnv" type="WorldEnvironment" parent="."]
+[node name="WorldEnv" type="WorldEnvironment" parent="." unique_id=673188402]
 environment = SubResource("Environment_e4v8o")
 
-[node name="Audio" type="Node" parent="."]
+[node name="Audio" type="Node" parent="." unique_id=178324262]
 
-[node name="AudioMusic1" type="AudioStreamPlayer" parent="Audio"]
+[node name="AudioMusic1" type="AudioStreamPlayer" parent="Audio" unique_id=1078677547]
 bus = &"Music"
 script = ExtResource("8_ld425")
 
-[node name="AudioMusic2" type="AudioStreamPlayer" parent="Audio"]
+[node name="AudioMusic2" type="AudioStreamPlayer" parent="Audio" unique_id=1601795799]
 bus = &"Music"
 script = ExtResource("8_ld425")
 
-[node name="AudioAmb1" type="AudioStreamPlayer" parent="Audio"]
+[node name="AudioAmb1" type="AudioStreamPlayer" parent="Audio" unique_id=1716087534]
 bus = &"Ambience"
 script = ExtResource("8_ld425")
 
-[node name="AudioAmb2" type="AudioStreamPlayer" parent="Audio"]
+[node name="AudioAmb2" type="AudioStreamPlayer" parent="Audio" unique_id=828460783]
 bus = &"Ambience"
 script = ExtResource("8_ld425")
 
-[node name="AudioMenu" type="AudioStreamPlayer" parent="Audio"]
+[node name="AudioMenu" type="AudioStreamPlayer" parent="Audio" unique_id=507936671]
 bus = &"SFX"
 
-[node name="AudioVoice" type="AudioStreamPlayer" parent="Audio"]
+[node name="AudioVoice" type="AudioStreamPlayer" parent="Audio" unique_id=1315899102]
 bus = &"Voice"
 
-[node name="ConfigHandler" type="Node" parent="."]
+[node name="ConfigHandler" type="Node" parent="." unique_id=1332652940]
 script = ExtResource("12_x2vfy")
 
-[node name="CameraPivot" type="Node3D" parent="."]
+[node name="CameraPivot" type="Node3D" parent="." unique_id=1049301632]
 
-[node name="CameraArm" type="SpringArm3D" parent="CameraPivot"]
+[node name="CameraArm" type="SpringArm3D" parent="CameraPivot" unique_id=245995391]
 collision_mask = 32767
 shape = SubResource("SphereShape3D_h33tr")
 spring_length = 6.0
 margin = 0.5
 
-[node name="PlayerCam" type="Camera3D" parent="CameraPivot/CameraArm"]
+[node name="PlayerCam" type="Camera3D" parent="CameraPivot/CameraArm" unique_id=1598640400]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 far = 90000.0
 script = ExtResource("4_dyya7")
 
-[node name="FreeLookCam" type="Camera3D" parent="."]
+[node name="FreeLookCam" type="Camera3D" parent="." unique_id=1972004125]
 process_mode = 4
 far = 90000.0
 script = ExtResource("5_7wkgt")
 
-[node name="XR_FE" type="SubViewport" parent="."]
+[node name="XR_FE" type="SubViewport" parent="." unique_id=1304597389]
 transparent_bg = true
 size = Vector2i(1280, 720)

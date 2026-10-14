@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using Godot;
+using Rehab.Agents.Character;
 namespace Rehab;
 
 public partial class AgentCharacterXR : AgentCharacter
@@ -93,11 +94,11 @@ public partial class AgentCharacterXR : AgentCharacter
             if (!isJumping && onFloor)
             {
                 if (speed == 0)
-                    DoAnimation(9, true);
+                    DoAnimation(Crash.Anim.ShuffleFeet, true);
                 else if (speed == WalkSpeed)
-                    DoAnimation(10, true);
+                    DoAnimation(Crash.Anim.Walk, true);
                 else
-                    DoAnimation(11, true);
+                    DoAnimation(Crash.Anim.Run, true);
             }
         }
         else
@@ -106,7 +107,7 @@ public partial class AgentCharacterXR : AgentCharacter
             char_velocity.Z = 0f;
             if (!isJumping && onFloor && spinTimer <= 0f)
             {
-                DoAnimation(8, true);
+                DoAnimation(Crash.Anim.Idle, true);
             }
         }
 
@@ -115,7 +116,7 @@ public partial class AgentCharacterXR : AgentCharacter
             coyoteTimer -= delta;
             if (coyoteTimer <= 0f && spinTimer <= 0.0)
             {
-                DoAnimation(27, false);
+                DoAnimation(Crash.Anim.JumpFall, false);
             }
         }
 

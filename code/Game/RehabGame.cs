@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Godot;
+using Rehab.Agents.Character;
 namespace Rehab;
 
 public static class RehabGame
@@ -84,6 +85,7 @@ public static class RehabGame
         Gems.Clear();
         ChunkData.Clear();
     }
+
 
     public static void AddWumpa(int amount)
     {

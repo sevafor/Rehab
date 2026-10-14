@@ -13,6 +13,7 @@ public partial class PlayerCamera : Camera3D
     Vector2 mouse_add = Vector2.Zero;
     public SpringArm3D Arm;
     public Node3D ArmPivot;
+    float cameraMoveWeight = 77.7f;
 
     public override void _Ready()
     {
@@ -135,7 +136,7 @@ public partial class PlayerCamera : Camera3D
             float rad = Mathf.DegToRad(camangleX * 180f);
             rad = Mathf.LerpAngle(ArmPivot.Rotation.Y, rad, (float)delta * 16.0f);
             rad = Mathf.RadToDeg(rad);
-            ArmPivot.RotationDegrees = ArmPivot.RotationDegrees.Lerp(new Vector3(camangleYdeg, rad, 0f), (float)delta * 8.0f);
+            ArmPivot.RotationDegrees = ArmPivot.RotationDegrees.Lerp(new Vector3(camangleYdeg, rad, 0f), (float)delta * cameraMoveWeight);
         }
         LookAt(camTarget.GlobalTransform.Origin + (Vector3.Up * pivotheight), Vector3.Up);
     }

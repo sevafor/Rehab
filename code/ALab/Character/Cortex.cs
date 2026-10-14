@@ -10,4 +10,7 @@ public partial class Cortex : AgentCharacter
     public override float CrawlSpeed => 1.75f;
     public override float SlideSpeed => 18f;
     public override float SlideTime => 0.4f;
+    public override float JumpSpeed => 8.0f;
+
+    public override int TimesCanJump => 1;
 }
