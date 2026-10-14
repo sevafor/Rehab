@@ -29,6 +29,11 @@ public partial class FreeLookCamera : Camera3D
 
     public float cooldown = 0.1f;
 
+    public override void _Ready()
+    {
+        PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
+    }
+
     public override void _Input(InputEvent input)
     {
         if (ProcessMode == ProcessModeEnum.Disabled) return;

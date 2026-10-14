@@ -33,8 +33,15 @@ public partial class AgentCharacter : Agent
     bool isCrouched;
     bool isJumping = false;
     float pushTimer;
-    const float PushAnimGrace = 1.25f;
+    bool groundedByPush;
+    const float PushAnimGrace = 0.2f;
+    const float PushFollowDistance = 2.0f;
+    Node3D lastPushedBody;
     public float slideTimer;
+    Vector3 slideDir;
+    bool slideJumpBuffered;
+    bool isSlideJumping;
+    float slideJumpLandTimer;
     public float coyoteTimer;
     public bool BlockMovement;
     public Vector3 SpawnPos;
@@ -62,24 +69,25 @@ public partial class AgentCharacter : Agent
 
     public const float AirGravity = 50f;
     public virtual float WalkSpeed => 2.5f;
-    public virtual float RunSpeed => 9f;
+    public virtual float RunSpeed => 9.0f;
     public virtual float SpinLength => 0.4f;
     public virtual float CrawlSpeed => 1.75f;
-    public virtual float SlideSpeed => 18f;
+    public virtual float SlideSpeed => 18.0f;
     public virtual float SlideTime => 0.4f;
+    public virtual float SlideJumpSpeed => 14.0f;
     public virtual float JumpSpeed => 15.0f;
     public virtual float PushMass => 80.0f;
     public virtual float PushStrength => 0.2f;
     public virtual float SpinHitRadius => 1.25f;
     public virtual float SpinHitSpeed => 16.0f;
     public virtual float SpinHitLift => 7.0f;
+    public virtual float StepHeight => 1.37f;
     HashSet<Node3D> spinHitBodies = new();
     SphereShape3D spinHitShape;
 
     bool infiniteJumps = false;
-    public virtual int TimesCanJump => 2;
+    protected virtual int TimesCanJump => 2;
     int timesJumped = 0;
-
 
     public static AgentCharacter activeCharacter;
     public static Dictionary<int, string> ActiveActorTypes = new();
@@ -212,7 +220,8 @@ public partial class AgentCharacter : Agent
     {
         if (BlockMovement) return;
         Vector3 direction = Vector3.Zero;
-        bool onFloor = (bool)Call("is_on_floor");
+        bool onFloor = (bool)Call("is_on_floor") || groundedByPush;
+        groundedByPush = false;
 
         direction.X -= Input.GetActionStrength(RehabGame.Pad_Dpad_Up);
         direction.X += Input.GetActionStrength(RehabGame.Pad_Dpad_Down);
@@ -250,6 +259,27 @@ public partial class AgentCharacter : Agent
         {
             pushTimer -= delta;
         }
+        if (slideJumpLandTimer > 0f)
+        {
+            slideJumpLandTimer -= delta;
+        }
+        if (lastPushedBody != null)
+        {
+            if (!IsInstanceValid(lastPushedBody) || pushTimer <= 0f)
+            {
+                lastPushedBody = null;
+            }
+            else
+            {
+                var toBody = lastPushedBody.GlobalPosition - GlobalPosition;
+                toBody.Y = 0f;
+                var moveDir = new Vector3(char_velocity.X, 0f, char_velocity.Z);
+                if (toBody.Length() < PushFollowDistance && moveDir.LengthSquared() > 0.01f && toBody.Normalized().Dot(moveDir.Normalized()) > 0.5f)
+                {
+                    pushTimer = PushAnimGrace;
+                }
+            }
+        }
         if (spinTimer > 0f)
         {
             spinTimer -= delta;
@@ -268,12 +298,7 @@ public partial class AgentCharacter : Agent
             slideTimer -= delta;
             if (slideTimer <= 0f)
             {
-                Call("set_collision_mask_value", 9, true);
-                Call("set_collision_mask_value", 10, true);
-                Call("set_collision_mask_value", 11, true);
-                Call("set_collision_mask_value", 12, true);
-                Call("set_collision_mask_value", 13, true);
-                Call("set_collision_mask_value", 14, true);
+                EndSlide();
             }
         }
 
@@ -283,7 +308,19 @@ public partial class AgentCharacter : Agent
             RehabGame.DisplayMessage("INFINITE JUMPS " + (infiniteJumps == true ? Tr("#FE-On") : Tr("#FE-Off")));
         }
 
-        if (Input.IsActionJustPressed(RehabGame.Pad_Cross))
+        bool jumpPressed = Input.IsActionJustPressed(RehabGame.Pad_Cross);
+        if (jumpPressed && slideTimer > SlideTime * 0.5f)
+        {
+            slideJumpBuffered = true;
+            jumpPressed = false;
+        }
+        if (slideJumpBuffered && slideTimer > 0f && slideTimer <= SlideTime * 0.5f)
+        {
+            slideJumpBuffered = false;
+            jumpPressed = true;
+        }
+
+        if (jumpPressed && !isSlideJumping)
         {
             if (timesJumped < TimesCanJump || infiniteJumps == true)
             {
@@ -292,7 +329,14 @@ public partial class AgentCharacter : Agent
 
                 char_velocity.Y = JumpSpeed;
                 
-                if ((ActiveAnim != Crash.Anim.JumpStart || ActiveAnim != Crash.Anim.DoubleJumpFistUp) && spinTimer <= 0.0)
+                if (slideTimer > 0f)
+                {
+                    EndSlide();
+                    isSlideJumping = true;
+                    DoAnimation(Crash.Anim.SlideJump, false);
+                    DoSound(0, 1f, 0f);
+                }
+                else if ((ActiveAnim != Crash.Anim.JumpStart || ActiveAnim != Crash.Anim.DoubleJumpFistUp) && spinTimer <= 0.0)
                 {
                     DoAnimation(timesJumped == 1 ? Crash.Anim.JumpStart : Crash.Anim.DoubleJumpFistUp, false);
                     DoSound(0, 1f, 0f);
@@ -316,7 +360,7 @@ public partial class AgentCharacter : Agent
                 RehabGame.DisplayMessage("GRAVITY " + Tr("#FE-Off"));
             }
         }
-        if (Input.IsActionJustPressed(RehabGame.Pad_Square) && spinTimer <= 0f && SpinLength > 0f && !isCrouched)
+        if (Input.IsActionJustPressed(RehabGame.Pad_Square) && spinTimer <= 0f && slideTimer <= 0f && !isSlideJumping && SpinLength > 0f && !isCrouched)
         {
             spinTimer = SpinLength;
             spinHitBodies.Clear();
@@ -341,6 +385,7 @@ public partial class AgentCharacter : Agent
             if (pressed && slideTimer <= 0f && onFloor && SlideSpeed > 0f)
             {
                 slideTimer = SlideTime;
+                slideDir = direction.Normalized();
                 DoAnimation(Crash.Anim.SlidePose, true);
                 DoSound(6, 1f, 0f);
                 Call("set_collision_mask_value", 11, true);
@@ -385,6 +430,21 @@ public partial class AgentCharacter : Agent
             currentSpeed = SlideSpeed;
         }
         direction = direction.Normalized();
+        if (slideTimer > 0f)
+        {
+            direction = slideDir;
+            pressed = true;
+        }
+        else if (isSlideJumping)
+        {
+            direction = slideDir;
+            pressed = true;
+            currentSpeed = SlideJumpSpeed;
+        }
+        if (slideJumpLandTimer > 0f && (pressed || isJumping || spinTimer > 0f || slideTimer > 0f))
+        {
+            slideJumpLandTimer = 0f;
+        }
 
         if (pressed)
         {
@@ -401,7 +461,7 @@ public partial class AgentCharacter : Agent
                 GlobalRotation = GlobalRotation.Lerp(targetRot, 5f * delta); //GlobalRotation.Slerp(targetRot, 5f * delta);
                 GlobalRotation = new Vector3(0, GlobalRotation.Y, 0);
             }
-            if (!isJumping && onFloor && spinTimer <= 0.0 && slideTimer <= 0.0)
+            if (!isJumping && onFloor && spinTimer <= 0.0 && slideTimer <= 0.0 && slideJumpLandTimer <= 0f)
             {
                 if (isCrouched)
                 {
@@ -435,7 +495,7 @@ public partial class AgentCharacter : Agent
                 char_velocity.X = 0f;
                 char_velocity.Z = 0f;
             }
-            if (!isJumping && onFloor && spinTimer <= 0f)
+            if (!isJumping && onFloor && spinTimer <= 0f && slideJumpLandTimer <= 0f)
             {
                 if (!isCrouched && slideTimer <= 0f)
                 {
@@ -480,12 +540,29 @@ public partial class AgentCharacter : Agent
             coyoteTimer = 0.1f;
         }
 
+        if (onFloor && !isJumping)
+        {
+            TryStepUp(delta);
+        }
+
+        float preMoveY = GlobalPosition.Y;
+        bool wasGrounded = onFloor && !isJumping;
+
         Set("velocity", char_velocity);
         Call("move_and_slide");
 
         if (char_velocity.Y <= 0.2f && onFloor)
         {
+            if (isSlideJumping)
+            {
+                DoAnimation(Crash.Anim.JumpLand2, false);
+                if (ActiveAnim == Crash.Anim.JumpLand2)
+                {
+                    slideJumpLandTimer = (float)SubModels[ActiveModel].GetNode<AnimationPlayer>("AnimationPlayer").CurrentAnimationLength;
+                }
+            }
             isJumping = false;
+            isSlideJumping = false;
             timesJumped = 0;
         }
 
@@ -495,8 +572,8 @@ public partial class AgentCharacter : Agent
         }
 
         var colCount1 = (int)Call("get_slide_collision_count");
-        if (colCount1 == 0) return;
         var pushed = new HashSet<Node3D>();
+        bool hitPushable = false;
         for (int i = 0; i < colCount1; i++)
         {
             var colData = (KinematicCollision3D)Call("get_slide_collision", i);
@@ -508,6 +585,7 @@ public partial class AgentCharacter : Agent
                 var hit = colData.GetCollider(a);
                 if (hit is Node3D rigid && rigid.IsClass("RigidBody3D") && !(bool)rigid.Get("freeze"))
                 {
+                    hitPushable = true;
                     if (spinTimer <= 0f && pushed.Add(rigid))
                     {
                         PushRigidBody(rigid, colData.GetNormal(a), colData.GetPosition(a));
@@ -529,6 +607,22 @@ public partial class AgentCharacter : Agent
             }
         }
 
+        if (wasGrounded && (hitPushable || pushTimer > 0f) && GlobalPosition.Y > preMoveY)
+        {
+            groundedByPush = SnapDownOffPushable(GlobalPosition.Y - preMoveY);
+        }
+    }
+
+    void EndSlide()
+    {
+        slideTimer = 0f;
+        slideJumpBuffered = false;
+        Call("set_collision_mask_value", 9, true);
+        Call("set_collision_mask_value", 10, true);
+        Call("set_collision_mask_value", 11, true);
+        Call("set_collision_mask_value", 12, true);
+        Call("set_collision_mask_value", 13, true);
+        Call("set_collision_mask_value", 14, true);
     }
 
     void PushRigidBody(Node3D body, Vector3 normal, Vector3 point)
@@ -541,6 +635,7 @@ public partial class AgentCharacter : Agent
         if (char_velocity.Dot(pushDir) > 0f)
         {
             pushTimer = PushAnimGrace;
+            lastPushedBody = body;
         }
 
         float velDiff = char_velocity.Dot(pushDir) - ((Vector3)body.Get("linear_velocity")).Dot(pushDir);
@@ -548,6 +643,61 @@ public partial class AgentCharacter : Agent
 
         float effectiveMass = Math.Min((float)body.Get("mass"), PushMass);
         body.Call("apply_impulse", pushDir * velDiff * effectiveMass * PushStrength, point - body.GlobalPosition);
+    }
+
+    bool SnapDownOffPushable(float lift)
+    {
+        var col = new KinematicCollision3D();
+        float probe = lift + 0.1f;
+        if ((bool)Call("test_move", GlobalTransform, Vector3.Down * probe, col))
+        {
+            var below = col.GetCollider() as Node3D;
+            bool belowIsPushable = below != null && below.IsClass("RigidBody3D") && !(bool)below.Get("freeze");
+            if (!belowIsPushable && col.GetNormal().Y >= 0.7f)
+            {
+                GlobalPosition += col.GetTravel();
+                return true;
+            }
+        }    
+        GlobalPosition += Vector3.Down * lift;
+        return true;
+    }
+
+    static bool IsStaticGround(GodotObject collider)
+    {
+        if (collider is not Node node || node.GetClass() != "StaticBody3D") return false;
+        for (var n = node; n != null; n = n.GetParent())
+        {
+            if (n is Agent) return false;
+        }
+        return true;
+    }
+
+    void TryStepUp(float delta)
+    {
+        var motion = new Vector3(char_velocity.X, 0f, char_velocity.Z) * delta;
+        if (StepHeight <= 0f || motion.LengthSquared() < 0.000001f) return;
+        var forward = motion.Normalized() * Math.Max(motion.Length(), 0.1f);
+
+        var from = GlobalTransform;
+        var col = new KinematicCollision3D();
+        if (!(bool)Call("test_move", from, forward, col)) return;
+        if (!IsStaticGround(col.GetCollider())) return;
+        if (col.GetNormal().Y > 0.7f) return;
+
+        var up = Vector3.Up * StepHeight;
+        if ((bool)Call("test_move", from, up)) return;
+        var raised = from.Translated(up);
+        if ((bool)Call("test_move", raised, forward)) return;
+        var landCol = new KinematicCollision3D();
+        var raisedFwd = raised.Translated(forward);
+        if (!(bool)Call("test_move", raisedFwd, -up, landCol)) return;
+        if (landCol.GetNormal().Y < 0.7f) return;
+        if (!IsStaticGround(landCol.GetCollider())) return;
+
+        float stepAmount = StepHeight - landCol.GetTravel().Length();
+        if (stepAmount <= 0.01f) return;
+        GlobalPosition += Vector3.Up * stepAmount;
     }
 
     void UpdateSpinHits()
@@ -811,7 +961,7 @@ public partial class AgentCharacter : Agent
             oldPts[4].MoveToward(new Vector3(0.5f, 1, 0.5f) * size, 10f * delta),
             oldPts[5].MoveToward(new Vector3(-0.5f, 1, -0.5f) * size, 10f * delta),
             oldPts[6].MoveToward(new Vector3(0.5f, 1, -0.5f) * size, 10f * delta),
-            oldPts[7].MoveToward(new Vector3(0.5f, 1, 0.5f) * size, 10f * delta),
+            oldPts[7].MoveToward(new Vector3(-0.5f, 1, 0.5f) * size, 10f * delta),
         ];
         DynamicCol.Shape.Set("points", Points);
 

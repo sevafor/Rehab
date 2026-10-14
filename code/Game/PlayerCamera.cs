@@ -13,12 +13,15 @@ public partial class PlayerCamera : Camera3D
     Vector2 mouse_add = Vector2.Zero;
     public SpringArm3D Arm;
     public Node3D ArmPivot;
-    float cameraMoveWeight = 77.7f;
+    float cameraMoveWeight = 60.0f;
+    float followY;
+    const float VerticalFollowSpeed = 6.0f;
 
     public override void _Ready()
     {
         Arm = (SpringArm3D)GetParent();
         ArmPivot = (Node3D)Arm.GetParent();
+        ArmPivot.PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
     }
 
     public override void _Input(InputEvent input)
@@ -39,8 +42,11 @@ public partial class PlayerCamera : Camera3D
         if (camTarget == null) return;
 
         float pivotheight = 3.0f;
+        var targetPos = camTarget.GetGlobalTransformInterpolated().Origin;
+        followY = Mathf.Lerp(followY, targetPos.Y, 1f - Mathf.Exp(-VerticalFollowSpeed * (float)delta));
+        var followPos = new Vector3(targetPos.X, followY, targetPos.Z);
         //ArmPivot.GlobalPosition = camTarget.GlobalPosition + Vector3.Up * 3.0f;
-        ArmPivot.GlobalPosition = ArmPivot.GlobalPosition.Lerp(camTarget.GlobalPosition + Vector3.Up * pivotheight, (float)delta * 8.0f);
+        ArmPivot.GlobalPosition = ArmPivot.GlobalPosition.Lerp(followPos + Vector3.Up * pivotheight, (float)delta * 8.0f);
         float camdirX = 0f;
         float camdirY = 0f;
 
@@ -138,7 +144,7 @@ public partial class PlayerCamera : Camera3D
             rad = Mathf.RadToDeg(rad);
             ArmPivot.RotationDegrees = ArmPivot.RotationDegrees.Lerp(new Vector3(camangleYdeg, rad, 0f), (float)delta * cameraMoveWeight);
         }
-        LookAt(camTarget.GlobalTransform.Origin + (Vector3.Up * pivotheight), Vector3.Up);
+        LookAt(followPos + (Vector3.Up * pivotheight), Vector3.Up);
     }
 
     public void FullReset()
@@ -157,6 +163,7 @@ public partial class PlayerCamera : Camera3D
     {
         FullReset();
         camTarget = target;
+        followY = target.GlobalPosition.Y;
         camangleX = (target.GlobalRotationDegrees.Y / 180f) + 1f;
 
         float pivotheight = 3.0f;

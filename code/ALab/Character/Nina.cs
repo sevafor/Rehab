@@ -12,5 +12,5 @@ public partial class Nina : AgentCharacter
     public override float SlideTime => 0f;
     public override float JumpSpeed => 10.0f;
 
-    public override int TimesCanJump => 1;
+    protected override int TimesCanJump => 1;
 }

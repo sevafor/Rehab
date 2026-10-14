@@ -12,5 +12,5 @@ public partial class Cortex : AgentCharacter
     public override float SlideTime => 0.4f;
     public override float JumpSpeed => 8.0f;
 
-    public override int TimesCanJump => 1;
+    protected override int TimesCanJump => 1;
 }

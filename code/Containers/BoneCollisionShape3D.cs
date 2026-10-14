@@ -9,7 +9,8 @@ public partial class BoneCollisionShape3D : CollisionShape3D{
 
     public override void _Ready()
     {
-        skeleton = GetParent().GetNode<Skeleton3D>("Armature");
+        skeleton = GetParent().GetNodeOrNull<Skeleton3D>("Armature");
+        if (skeleton == null) return;
         if (bone == 255) bone = 0;
         UpdateBone();
     }
@@ -17,6 +18,7 @@ public partial class BoneCollisionShape3D : CollisionShape3D{
     async void UpdateBone()
     {
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        if (!IsInstanceValid(skeleton) || bone >= skeleton.GetBoneCount()) return;
         Transform = skeleton.GetBonePose(bone);
     }
 
