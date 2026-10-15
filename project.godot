@@ -47,6 +47,15 @@ project/assembly_name="Rehab"
 
 export/convert_text_resources_to_binary=false
 
+[file_customization]
+
+folder_colors={
+"res://assets/": "orange",
+"res://code/": "gray",
+"res://import/": "green",
+"res://shaders/": "blue"
+}
+
 [importer_defaults]
 
 texture={
@@ -285,6 +294,7 @@ common/physics_interpolation=true
 
 rendering_device/driver.windows="d3d12"
 textures/vram_compression/import_etc2_astc=true
+viewport/hdr_2d=true
 environment/defaults/default_clear_color=Color(0, 0, 0, 1)
 occlusion_culling/use_occlusion_culling=true
 

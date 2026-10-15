@@ -93,6 +93,15 @@ public partial class AgentCharacter : Agent
 
     public static AgentCharacter activeCharacter;
     public static Dictionary<int, string> ActiveActorTypes = new();
+    bool keepActorTypeOnExit;
+
+    static readonly CharacterType[] SwitchableCharacters =
+    [
+        CharacterType.Crash,
+        CharacterType.Cortex,
+        CharacterType.Nina,
+        CharacterType.MechaBandicoot,
+    ];
 
     public override void _Ready()
     {
@@ -146,7 +155,14 @@ public partial class AgentCharacter : Agent
         activeCharacter = this;
         physCam = RehabScene.PlayerCam;
         physCam.SetupCam(this);
+        LoadFootstepSounds();
+        RehabGame.SetCheckPoint(SpawnPos, SpawnRot, ParentScene.Name, true);
 
+        Character_ActivePostSetup();
+    }
+
+    void LoadFootstepSounds()
+    {
         FS_Dirt_1 = (AudioStream)ResourceLoader.Load(RehabGame.AssetsPath + "Sounds/Surface/fs_dirt_3.sample");
         FS_Dirt_2 = (AudioStream)ResourceLoader.Load(RehabGame.AssetsPath + "Sounds/Surface/fs_dirt_5.sample");
         FS_Grass_1 = (AudioStream)ResourceLoader.Load(RehabGame.AssetsPath + "Sounds/Surface/fs_grass_2.sample");
@@ -164,9 +180,6 @@ public partial class AgentCharacter : Agent
         FS_Tile_1 = (AudioStream)ResourceLoader.Load(RehabGame.AssetsPath + "Sounds/Surface/L09_Cortex_boots_tile_2.sample");
         FS_Tile_2 = (AudioStream)ResourceLoader.Load(RehabGame.AssetsPath + "Sounds/Surface/L09_Cortex_boots_tile_7.sample");
         FS_Slippy = (AudioStream)ResourceLoader.Load(RehabGame.AssetsPath + "Sounds/Surface/L03_Tribesman_fs.sample");
-        RehabGame.SetCheckPoint(SpawnPos, SpawnRot, ParentScene.Name, true);
-
-        Character_ActivePostSetup();
     }
 
     public virtual void Character_ActivePostSetup()
@@ -184,7 +197,7 @@ public partial class AgentCharacter : Agent
             isReparenting = false;
             return;
         }
-        if (ActiveActorTypes.ContainsKey((int)CharType))
+        if (!keepActorTypeOnExit && ActiveActorTypes.ContainsKey((int)CharType))
         {
             if (ActiveActorTypes[(int)CharType] == GetPath())
             {
@@ -206,6 +219,11 @@ public partial class AgentCharacter : Agent
         if (activeCharacter != this)
         {
             UpdateNPC(delta);
+            return;
+        }
+        if (!BlockMovement && Input.IsActionJustPressed(RehabGame.Pad_R2))
+        {
+            SwitchToNextCharacter();
             return;
         }
 
@@ -626,6 +644,37 @@ public partial class AgentCharacter : Agent
         {
             groundedByPush = SnapDownOffPushable(GlobalPosition.Y - preMoveY);
         }
+    }
+
+    void SwitchToNextCharacter()
+    {
+        int index = Array.IndexOf(SwitchableCharacters, CharType);
+        CharacterType nextType = SwitchableCharacters[(index + 1) % SwitchableCharacters.Length];
+        string scenePath = $"{RehabGame.AssetsPath}Actors/Actor/Chars/{nextType}.tscn";
+        if (!ResourceLoader.Exists(scenePath)) return;
+
+        AgentCharacter next = ResourceLoader.Load<PackedScene>(scenePath).Instantiate<AgentCharacter>();
+        next.HasFlags = HasFlags;
+        next.Flags = Flags;
+        next.Transform = ParentScene.GlobalTransform.AffineInverse() * GlobalTransform;
+        next.char_velocity = char_velocity;
+        next.gravityOn = gravityOn;
+        next.infiniteJumps = infiniteJumps;
+
+        ActiveActorTypes.Remove((int)nextType);
+        ParentScene.AddChild(next);
+        next.SpawnPos = SpawnPos;
+        next.SpawnRot = SpawnRot;
+
+        activeCharacter = next;
+        next.physCam = physCam;
+        physCam.RetargetCam(next);
+        next.LoadFootstepSounds();
+        next.Character_ActivePostSetup();
+
+        keepActorTypeOnExit = true;
+        QueueFree();
+        RehabGame.DisplayMessage(nextType.ToString().ToUpper());
     }
 
     void BounceOffCrate(float scale)

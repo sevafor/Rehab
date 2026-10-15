@@ -128,6 +128,7 @@ public partial class ChunkLink : Node3D
         if (body is AgentCharacter agent)
         {
             if (agent.GetParent() is Agent) return; // attached co-op character
+            if (agent.IsQueuedForDeletion()) return;
             InUse = true;
             agent.isSwitchingChunks = true;
             agent.isReparenting = true;

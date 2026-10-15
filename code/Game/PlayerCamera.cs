@@ -176,6 +176,13 @@ public partial class PlayerCamera : Camera3D
         Arm.AddExcludedObject((Rid)target.Call("get_rid"));
     }
 
+    public void RetargetCam(Node3D target)
+    {
+        camTarget = target;
+        Arm.ClearExcludedObjects();
+        Arm.AddExcludedObject((Rid)target.Call("get_rid"));
+    }
+
     public void CameraTriggerEntered(CameraTriggerVolume trig)
     {
 
